@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  /* Google Gill Core Palette & Contrast-Safe Neutral Surfaces */
+  --color-foreground: #0f172a;
+  --color-background: #f8fafc;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #475569;
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-foreground: #ffffff;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-border: #e2e8f0;
+  --color-ring: #059669;
+
+  /* Google Gill 4px/8px Spacing Grid System */
+  --spacing-gill-1: 4px;
+  --spacing-gill-2: 8px;
+  --spacing-gill-3: 12px;
+  --spacing-gill-4: 16px;
+  --spacing-gill-5: 20px;
+  --spacing-gill-6: 24px;
+  --spacing-gill-8: 32px;
+  --spacing-gill-10: 40px;
+  --spacing-gill-12: 48px;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* High contrast accessible focus styles according to Google Gill specification */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #f8fafc, 0 0 0 4px #059669;
+  }
+}
+
+/* Gill Design System Helper Classes */
+.gill-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+}
+
+.dark .gill-card {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+.gill-focus-ring {
+  transition: box-shadow 0.15s ease-in-out;
+}
+.gill-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #059669;
+}

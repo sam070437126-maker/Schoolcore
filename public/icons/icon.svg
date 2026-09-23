@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#0f172a"/>
+  <circle cx="256" cy="256" r="210" fill="#059669"/>
+  <!-- Graduation cap / school crest -->
+  <path d="M256 140 L390 205 L256 270 L122 205 Z" fill="#ffffff"/>
+  <path d="M172 230 L172 320 C172 355 340 355 340 320 L340 230 L256 270 Z" fill="#ffffff" opacity="0.95"/>
+  <path d="M380 205 L380 310 L365 320 L365 212 Z" fill="#facc15"/>
+  <circle cx="365" cy="328" r="8" fill="#facc15"/>
+  <path d="M220 375 L292 375 C292 390 220 390 220 375 Z" fill="#ffffff"/>
+</svg>

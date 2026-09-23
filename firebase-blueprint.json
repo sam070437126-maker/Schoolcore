@@ -1,0 +1,407 @@
+{
+  "entities": {
+    "School": {
+      "title": "School",
+      "description": "Educational institution tenant profile in SchoolCore",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "motto": { "type": "string" },
+        "logo_url": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "state": { "type": "string" },
+        "country": { "type": "string" },
+        "website": { "type": "string" },
+        "lga": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "google_place_id": { "type": "string" },
+        "google_maps_uri": { "type": "string" },
+        "location_source": { "type": "string" },
+        "last_verified_at": { "type": "string" },
+        "current_session_id": { "type": "string" },
+        "current_term": { "type": "string", "enum": ["FIRST_TERM", "SECOND_TERM", "THIRD_TERM"] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "phone", "address", "state", "country", "current_term", "created_at", "updated_at"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User identity and profile document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "full_name": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "phone": { "type": "string" },
+        "password_hash": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "email", "full_name", "created_at"]
+    },
+    "SchoolUser": {
+      "title": "SchoolUser",
+      "description": "Membership linking a UserProfile to a School tenant with a specific role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "profile_id": { "type": "string" },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "TEACHER", "BURSAR", "ACADEMIC_COORDINATOR"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "profile_id", "role", "status", "created_at"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Enrolled pupil in a school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "admission_number": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "middle_name": { "type": "string" },
+        "gender": { "type": "string", "enum": ["MALE", "FEMALE"] },
+        "date_of_birth": { "type": "string" },
+        "admission_date": { "type": "string" },
+        "current_class_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "GRADUATED", "TRANSFERRED", "SUSPENDED"] },
+        "guardian_name": { "type": "string" },
+        "guardian_phone": { "type": "string" },
+        "guardian_email": { "type": "string" },
+        "guardian_relationship": { "type": "string" },
+        "address": { "type": "string" },
+        "state_of_origin": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "admission_number", "first_name", "last_name", "gender", "status", "created_at", "updated_at"]
+    },
+    "SchoolClass": {
+      "title": "SchoolClass",
+      "description": "Class grade or stream within a school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "string" },
+        "arm": { "type": "string" },
+        "class_teacher_id": { "type": "string" },
+        "class_teacher_name": { "type": "string" },
+        "academic_session_id": { "type": "string" },
+        "capacity": { "type": "number" },
+        "student_count": { "type": "number" },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"] },
+        "subjects": { "type": "array" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "name", "level", "arm", "academic_session_id", "status", "created_at"]
+    },
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "Teacher or administrative employee in a school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "profile_id": { "type": "string" },
+        "employee_id": { "type": "string" },
+        "full_name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "qualification": { "type": "string" },
+        "specialization": { "type": "string" },
+        "assigned_classes": { "type": "array" },
+        "assigned_subjects": { "type": "array" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "employee_id", "full_name", "role", "status", "created_at"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "Curricular subject taught at the school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "category": { "type": "string" },
+        "is_core": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "name", "code", "category", "is_core", "created_at"]
+    },
+    "AttendanceSession": {
+      "title": "AttendanceSession",
+      "description": "Daily morning or afternoon roll-call session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "class_id": { "type": "string" },
+        "class_name": { "type": "string" },
+        "session_date": { "type": "string" },
+        "session_type": { "type": "string" },
+        "recorded_by_id": { "type": "string" },
+        "recorded_by_name": { "type": "string" },
+        "total_students": { "type": "number" },
+        "present_count": { "type": "number" },
+        "absent_count": { "type": "number" },
+        "late_count": { "type": "number" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "class_id", "session_date", "session_type", "recorded_by_id", "created_at"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Individual student attendance status in an attendance session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "student_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["PRESENT", "ABSENT", "LATE"] },
+        "remarks": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "session_id", "student_id", "status", "created_at"]
+    },
+    "SchoolNotice": {
+      "title": "SchoolNotice",
+      "description": "Official institutional broadcast announcement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "audience": { "type": "string", "enum": ["EVERYONE", "TEACHERS", "STUDENTS", "PARENTS", "CLASS"] },
+        "target_class_id": { "type": "string" },
+        "target_class_name": { "type": "string" },
+        "priority": { "type": "string", "enum": ["LOW", "NORMAL", "HIGH", "URGENT"] },
+        "status": { "type": "string", "enum": ["PUBLISHED", "DRAFT", "ARCHIVED"] },
+        "published_at": { "type": "string" },
+        "created_by_name": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "title", "message", "audience", "priority", "status", "created_at"]
+    },
+    "SchoolSettings": {
+      "title": "SchoolSettings",
+      "description": "Operational preferences and configuration for a school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "attendance_mode": { "type": "string" },
+        "enable_late_marking": { "type": "boolean" },
+        "allow_teacher_result_edit": { "type": "boolean" },
+        "notify_absent_guardians": { "type": "boolean" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "updated_at"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and administrative activity log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "actor_name": { "type": "string" },
+        "actor_role": { "type": "string" },
+        "action": { "type": "string" },
+        "entity_type": { "type": "string" },
+        "entity_id": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "school_id", "actor_id", "action", "entity_type", "timestamp"]
+    },
+    "AcademicSession": {
+      "title": "AcademicSession",
+      "description": "School academic year period",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "name": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "is_current": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "name", "start_date", "end_date", "is_current", "created_at"]
+    },
+    "AcademicConfig": {
+      "title": "AcademicConfig",
+      "description": "Grading scale and assessment weight configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "max_ca1": { "type": "number" },
+        "max_ca2": { "type": "number" },
+        "max_ca3": { "type": "number" },
+        "max_exam": { "type": "number" },
+        "grading_scale": { "type": "array" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "max_ca1", "max_ca2", "max_ca3", "max_exam", "updated_at"]
+    },
+    "TeacherSubjectAssignment": {
+      "title": "TeacherSubjectAssignment",
+      "description": "Mapping of a teacher to a specific subject in a specific class",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "teacher_id": { "type": "string" },
+        "teacher_name": { "type": "string" },
+        "class_id": { "type": "string" },
+        "class_name": { "type": "string" },
+        "subject_id": { "type": "string" },
+        "subject_name": { "type": "string" },
+        "academic_session_id": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "teacher_id", "class_id", "subject_id", "created_at"]
+    },
+    "SubjectResult": {
+      "title": "SubjectResult",
+      "description": "Continuous assessment and examination scores for a pupil",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "student_name": { "type": "string" },
+        "class_id": { "type": "string" },
+        "class_name": { "type": "string" },
+        "subject_id": { "type": "string" },
+        "subject_name": { "type": "string" },
+        "academic_session_id": { "type": "string" },
+        "term": { "type": "string" },
+        "teacher_id": { "type": "string" },
+        "teacher_name": { "type": "string" },
+        "ca1_score": { "type": "number" },
+        "ca2_score": { "type": "number" },
+        "ca3_score": { "type": "number" },
+        "exam_score": { "type": "number" },
+        "total_score": { "type": "number" },
+        "percentage": { "type": "number" },
+        "grade": { "type": "string" },
+        "remark": { "type": "string" },
+        "teacher_subject_remark": { "type": "string" },
+        "status": { "type": "string" },
+        "published_at": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "student_id", "class_id", "subject_id", "term", "status", "created_at", "updated_at"]
+    },
+    "StudentTermRemark": {
+      "title": "StudentTermRemark",
+      "description": "Form teacher and principal remarks on terminal reports",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "school_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "academic_session_id": { "type": "string" },
+        "term": { "type": "string" },
+        "form_teacher_remark": { "type": "string" },
+        "principal_remark": { "type": "string" },
+        "next_term_resumption_date": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "school_id", "student_id", "term", "updated_at"]
+    }
+  },
+  "firestore": {
+    "/schools/{schoolId}": {
+      "schema": "School",
+      "description": "Schools top-level collection"
+    },
+    "/profiles/{profileId}": {
+      "schema": "UserProfile",
+      "description": "User profiles top-level collection"
+    },
+    "/schoolUsers/{membershipId}": {
+      "schema": "SchoolUser",
+      "description": "School memberships top-level collection"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Enrolled students across schools with school_id tenant key"
+    },
+    "/classes/{classId}": {
+      "schema": "SchoolClass",
+      "description": "Class levels and arms with school_id tenant key"
+    },
+    "/staff/{staffId}": {
+      "schema": "StaffMember",
+      "description": "Teachers and staff with school_id tenant key"
+    },
+    "/subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "Curriculum subjects with school_id tenant key"
+    },
+    "/attendanceSessions/{sessionId}": {
+      "schema": "AttendanceSession",
+      "description": "Attendance roll-call sessions with school_id tenant key"
+    },
+    "/attendanceRecords/{recordId}": {
+      "schema": "AttendanceRecord",
+      "description": "Individual student attendance status records"
+    },
+    "/notices/{noticeId}": {
+      "schema": "SchoolNotice",
+      "description": "Announcements and school broadcast notices"
+    },
+    "/settings/{settingsId}": {
+      "schema": "SchoolSettings",
+      "description": "Institutional configuration and attendance rules"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable security and administrative audit records"
+    },
+    "/academicSessions/{sessionId}": {
+      "schema": "AcademicSession",
+      "description": "Academic calendar sessions with school_id tenant key"
+    },
+    "/academicConfigs/{configId}": {
+      "schema": "AcademicConfig",
+      "description": "Assessment grading weights and thresholds"
+    },
+    "/teacherSubjectAssignments/{assignmentId}": {
+      "schema": "TeacherSubjectAssignment",
+      "description": "Subject allocations to teachers in classes"
+    },
+    "/subjectResults/{resultId}": {
+      "schema": "SubjectResult",
+      "description": "Student subject continuous assessment and examination results"
+    },
+    "/studentTermRemarks/{remarkId}": {
+      "schema": "StudentTermRemark",
+      "description": "Terminal report remarks from class teachers and principals"
+    }
+  }
+}

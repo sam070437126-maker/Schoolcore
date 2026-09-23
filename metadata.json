@@ -1,0 +1,6 @@
+{
+  "name": "SchoolCore",
+  "description": "Multi-school institutional management platform providing tenant isolation, digital academic administration, attendance, report cards, fee reconciliation, and parent portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
