@@ -24,6 +24,7 @@ import { HomeworkView } from './components/views/HomeworkView.tsx';
 import { MessagesView } from './components/views/MessagesView.tsx';
 import { FinanceView } from './components/views/FinanceView.tsx';
 import { ApprovalsView } from './components/views/ApprovalsView.tsx';
+import { SchoolControlRoom } from './components/admin/SchoolControlRoom.tsx';
 
 // Icons for mobile bottom bar
 import {
@@ -38,6 +39,17 @@ import {
   MessageSquare,
   FileCheck2
 } from 'lucide-react';
+
+const isStandaloneDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    (window.navigator as any).standalone === true ||
+    window.location.search.includes('source=pwa') ||
+    window.location.search.includes('mode=standalone')
+  );
+};
 
 const MainApp: React.FC = () => {
   const {
@@ -79,6 +91,8 @@ const MainApp: React.FC = () => {
     setNavigationExtra(extra || null);
   };
 
+  const isInstalledApp = isStandaloneDevice();
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
@@ -88,17 +102,23 @@ const MainApp: React.FC = () => {
     );
   }
 
-  // If visitor is not authenticated, show Public Website by default (with instant Launch / Sign In toggle)
+  // When unauthenticated:
+  // - If running as installed WebApp on device: ALWAYS show WebApp login / activation, NEVER the public website
+  // - If browsed on public browser: show Public Website by default (with instant Launch / Sign In toggle)
   if (!isAuthenticated) {
-    if (!showAuthView) {
+    if (isInstalledApp || showAuthView) {
       return (
-        <PublicWebsite
-          onLaunchApp={() => setShowAuthView(true)}
-          onOpenRegister={() => setShowAuthView(true)}
+        <AuthView
+          onBackToWebsite={isInstalledApp ? undefined : () => setShowAuthView(false)}
         />
       );
     }
-    return <AuthView onBackToWebsite={() => setShowAuthView(false)} />;
+    return (
+      <PublicWebsite
+        onLaunchApp={() => setShowAuthView(true)}
+        onOpenRegister={() => setShowAuthView(true)}
+      />
+    );
   }
 
   // If authenticated user chose to preview public website
@@ -147,6 +167,16 @@ const MainApp: React.FC = () => {
           className="flex-1 overflow-y-auto p-3 sm:p-6 pb-20 lg:pb-8 max-w-7xl mx-auto w-full"
         >
           {activeTab === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+
+          {activeTab === 'control_room' && (
+            <RoleGuard
+              allowedRoles={['ADMIN', 'PRINCIPAL', 'SUPER_ADMIN']}
+              tabName="School Operations Control Room"
+              onNavigateHome={() => handleNavigate('dashboard')}
+            >
+              <SchoolControlRoom onNavigate={handleNavigate} />
+            </RoleGuard>
+          )}
 
           {activeTab === 'students' && (
             <RoleGuard

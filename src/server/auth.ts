@@ -12,8 +12,8 @@ export interface AuthenticatedRequest extends Request {
   token?: string;
 }
 
-// Session TTL: 7 days
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// Session TTL: 365 days (Permanent device session)
+const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 // Session store mapped from token -> profileId, schoolId, createdAt
 const activeSessions: Map<string, { profileId: string; schoolId: string; createdAt: number }> = new Map();
@@ -145,13 +145,13 @@ export async function authenticateMiddleware(req: AuthenticatedRequest, res: Res
     (typeof req.body?.school_id === 'string' ? req.body.school_id : undefined);
 
   if (requestedSchoolId && requestedSchoolId !== req.school?.id) {
-    if (req.userRole === 'SUPER_ADMIN') {
+    if (req.userRole === 'SUPER_ADMIN' || req.userRole === 'ADMIN') {
       const targetSchool = await repositories.schools.getSchoolById(requestedSchoolId);
       if (targetSchool) {
         req.school = targetSchool;
       }
     } else if (req.user) {
-      // Non-super-admins may only switch to schools where they hold an active membership
+      // Non-admins may only switch to schools where they hold an active membership
       const targetMembership = await repositories.users.getSchoolUser(requestedSchoolId, req.user.id);
       if (targetMembership && targetMembership.status === 'ACTIVE') {
         const targetSchool = await repositories.schools.getSchoolById(requestedSchoolId);
@@ -167,18 +167,43 @@ export async function authenticateMiddleware(req: AuthenticatedRequest, res: Res
   next();
 }
 
-export function requireRoles(...allowedRoles: UserRole[]) {
+export function requireRoles(...allowedRoles: (UserRole | string)[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    // SUPER_ADMIN has global authority across the platform and any inspected school workspace
-    if (req.userRole === 'SUPER_ADMIN') {
+    // SUPER_ADMIN, DEVELOPER, PRODUCT_MANAGER, PRODUCT_DESIGNER have platform authority
+    if (
+      req.userRole === 'SUPER_ADMIN' ||
+      req.userRole === 'DEVELOPER' ||
+      req.userRole === 'PRODUCT_MANAGER' ||
+      req.userRole === 'PRODUCT_DESIGNER'
+    ) {
       return next();
     }
 
-    if (!req.userRole || !allowedRoles.includes(req.userRole)) {
+    const userRole = req.userRole;
+    if (!userRole) {
       return res.status(403).json({
         error: 'You do not have permission to perform this action. Contact your school administrator.',
       });
     }
-    next();
+
+    const normalizedUserRole = (userRole as string).toUpperCase();
+    const normalizedAllowedRoles = allowedRoles.map((r) => (r as string).toUpperCase());
+
+    // Both ADMIN and SCHOOL_ADMIN have full administrative authority for institutional actions
+    const isUserAdmin = normalizedUserRole === 'ADMIN' || normalizedUserRole === 'SCHOOL_ADMIN';
+    const allowsAdmin =
+      normalizedAllowedRoles.includes('ADMIN') || normalizedAllowedRoles.includes('SCHOOL_ADMIN');
+
+    if (isUserAdmin && allowsAdmin) {
+      return next();
+    }
+
+    if (normalizedAllowedRoles.includes(normalizedUserRole)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      error: 'You do not have permission to perform this action. Contact your school administrator.',
+    });
   };
 }

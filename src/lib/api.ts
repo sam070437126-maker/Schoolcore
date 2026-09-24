@@ -29,17 +29,23 @@ import {
 } from '../types/index.ts';
 
 const TOKEN_KEY = 'schoolcore_token';
+const PERSISTENT_DEVICE_KEY = 'schoolcore_persistent_device_auth';
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem(PERSISTENT_DEVICE_KEY);
 }
 
 export function setStoredToken(token: string): void {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(PERSISTENT_DEVICE_KEY, token);
 }
 
 export function clearStoredToken(): void {
+  if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(PERSISTENT_DEVICE_KEY);
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}, retries = 3, delayMs = 350): Promise<T> {
@@ -289,13 +295,14 @@ export const api = {
   getDashboardStats: () => request<DashboardStats>('/dashboard/stats'),
 
   // Students
-  getStudents: (params: { search?: string; classId?: string; status?: string; page?: number; limit?: number }) => {
+  getStudents: (params: { search?: string; classId?: string; status?: string; page?: number; limit?: number; scope?: string }) => {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
     if (params.classId) query.append('classId', params.classId);
     if (params.status) query.append('status', params.status);
     if (params.page) query.append('page', params.page.toString());
     if (params.limit) query.append('limit', params.limit.toString());
+    if (params.scope) query.append('scope', params.scope);
     return request<{ students: Student[]; total: number; page: number; totalPages: number }>(`/students?${query.toString()}`);
   },
   getStudentById: (id: string) =>
@@ -567,6 +574,13 @@ export const api = {
     request<{ school: School; message: string }>(`/schools/${schoolId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    }),
+  getAcademicSessions: () =>
+    request<{ sessions: any[] }>('/academic-sessions'),
+  createAcademicSession: (payload: { name: string; start_date?: string; end_date?: string; is_current?: boolean }) =>
+    request<{ success: boolean; session: any }>('/academic-sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 
   // Audit Logs

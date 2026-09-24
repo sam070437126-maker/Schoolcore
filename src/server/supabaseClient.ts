@@ -32,11 +32,12 @@ const SUPABASE_SERVICE_ROLE_KEY = (
 // Database Mode configuration
 function resolveDatabaseMode(): string {
   const raw = (process.env.DATABASE_MODE || '').trim().replace(/^["']|["']$/g, '');
+  const hasBogusPostgres = raw.includes('YOUR-PASSWORD') || raw.includes('[YOUR-PASSWORD]');
   if (raw === 'memory') return 'memory';
-  if (raw === 'supabase' || raw.startsWith('postgres')) return 'supabase';
-  if (raw === 'firebase') return 'firebase';
   if (isFirebaseConfigured()) return 'firebase';
-  if (SUPABASE_URL && SUPABASE_ANON_KEY) return 'supabase';
+  if (!hasBogusPostgres && (raw === 'supabase' || raw.startsWith('postgres'))) return 'supabase';
+  if (raw === 'firebase') return 'firebase';
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('YOUR-') && !hasBogusPostgres) return 'supabase';
   return 'memory';
 }
 

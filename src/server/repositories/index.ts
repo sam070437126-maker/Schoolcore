@@ -11,11 +11,12 @@ import { createMemoryRepositories } from './memory/memoryRepositories.ts';
 
 export function resolveEffectiveDatabaseMode(): string {
   const raw = (process.env.DATABASE_MODE || '').trim().replace(/^["']|["']$/g, '');
+  const hasBogusPostgres = raw.includes('YOUR-PASSWORD') || raw.includes('[YOUR-PASSWORD]');
   if (raw === 'memory') return 'memory';
-  if (raw === 'supabase' || raw.startsWith('postgres')) return 'supabase';
-  if (raw === 'firebase') return 'firebase';
   if (isFirebaseConfigured()) return 'firebase';
-  if (isSupabaseConfigured()) return 'supabase';
+  if (raw === 'firebase') return 'firebase';
+  if (!hasBogusPostgres && (raw === 'supabase' || raw.startsWith('postgres'))) return 'supabase';
+  if (isSupabaseConfigured() && !hasBogusPostgres) return 'supabase';
   return 'memory';
 }
 

@@ -502,6 +502,14 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       phone,
     } = req.body;
 
+    let resolvedRole: UserRole = 'SCHOOL_ADMIN';
+    const rawRole = (role || '').toString().toUpperCase().trim();
+    if (rawRole === 'DEVELOPER' || rawRole === 'DEV') resolvedRole = 'DEVELOPER';
+    else if (rawRole === 'PRODUCT_MANAGER' || rawRole === 'MANAGER' || rawRole === 'PM') resolvedRole = 'PRODUCT_MANAGER';
+    else if (rawRole === 'PRODUCT_DESIGNER' || rawRole === 'DESIGNER' || rawRole === 'UIUX') resolvedRole = 'PRODUCT_DESIGNER';
+    else if (rawRole === 'ADMIN' || rawRole === 'SCHOOL_ADMIN') resolvedRole = 'SCHOOL_ADMIN';
+    else if (rawRole === 'PRINCIPAL') resolvedRole = 'PRINCIPAL';
+
     const resolvedFullName = (full_name || fullName || '').trim();
     const resolvedSchoolName = (school_name || schoolName || 'Bright Future Secondary School (Lagos)').trim();
     const resolvedEmail = (email || '').toLowerCase().trim();
@@ -571,7 +579,7 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       id: `su-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       school_id: school.id,
       profile_id: newProfile.id,
-      role: role as UserRole,
+      role: resolvedRole,
       status: 'ACTIVE',
       created_at: new Date().toISOString(),
     });
@@ -584,7 +592,7 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       full_name: newProfile.full_name,
       email: resolvedEmail,
       phone: newProfile.phone || '',
-      role: role as UserRole,
+      role: resolvedRole,
       status: 'ACTIVE',
       created_at: new Date().toISOString(),
     });
@@ -1658,14 +1666,19 @@ router.get('/students', authenticateMiddleware, async (req: AuthenticatedRequest
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
 
-    // RBAC: If authenticated as PARENT, strictly return their specific child/ward
+    // RBAC: If authenticated as PARENT, strictly return their specific child/ward via linked accounts or guardian info
     if (req.userRole === 'PARENT') {
       const allStudentsRes = await repositories.students.getStudents(schoolId, {}, { page: 1, limit: 100 });
       const parentEmail = (req.user?.email || '').toLowerCase().trim();
       const parentName = (req.user?.full_name || '').toLowerCase().trim();
       const parentPhone = (req.user?.phone || '').trim();
 
+      const linkedStudentIds = (db.data.parentStudents || [])
+        .filter((ps) => ps.parent_profile_id === req.user?.id || (parentEmail && (ps.parent_email || '').toLowerCase() === parentEmail))
+        .map((ps) => ps.student_id);
+
       const matchedStudents = allStudentsRes.students.filter((s) => {
+        if (linkedStudentIds.includes(s.id)) return true;
         const gEmail = (s.guardian_email || '').toLowerCase().trim();
         const gName = (s.guardian_name || '').toLowerCase().trim();
         const gPhone = (s.guardian_phone || '').trim();
@@ -1684,8 +1697,47 @@ router.get('/students', authenticateMiddleware, async (req: AuthenticatedRequest
       });
     }
 
-    const result = await repositories.students.getStudents(schoolId, { search, classId, status }, { page, limit });
-    res.json(result);
+    // Teacher awareness: resolve classes taught by this teacher
+    const teacherClasses = new Set<string>();
+    if (req.userRole === 'TEACHER' && req.staff) {
+      (req.staff.assigned_classes || []).forEach((cId) => teacherClasses.add(cId));
+      const schoolClasses = await repositories.classes.getClasses(schoolId);
+      schoolClasses
+        .filter((c) => (c as any).form_tutor_id === req.staff?.id || (c as any).teacher_id === req.staff?.id)
+        .forEach((c) => teacherClasses.add(c.id));
+      try {
+        const assignments = await repositories.academics.getTeacherSubjectAssignments(schoolId, { teacherId: req.staff.id });
+        assignments.forEach((a) => teacherClasses.add(a.class_id));
+      } catch {
+        // ignore
+      }
+    }
+
+    const scope = (req.query.scope as string) || '';
+    const myStudentsOnly = scope === 'my_classes' || req.query.my_students === 'true';
+
+    let filterClassId = classId;
+    if (myStudentsOnly && teacherClasses.size > 0 && !classId) {
+      // If teacher requested only their students, filter across their classes
+    }
+
+    const result = await repositories.students.getStudents(schoolId, { search, classId: filterClassId, status }, { page, limit });
+
+    // Annotate whether each student belongs to the classes taught by this teacher
+    let finalStudents = result.students.map((st) => ({
+      ...st,
+      is_my_student: req.userRole === 'TEACHER' ? teacherClasses.has(st.current_class_id) : true,
+    }));
+
+    if (myStudentsOnly && teacherClasses.size > 0) {
+      finalStudents = finalStudents.filter((st) => teacherClasses.has(st.current_class_id));
+    }
+
+    res.json({
+      ...result,
+      students: finalStudents,
+      total: myStudentsOnly ? finalStudents.length : result.total,
+    });
   } catch (err: any) {
     res.status(500).json({ error: mapDatabaseError(err) });
   }
@@ -1704,11 +1756,17 @@ router.get('/students/:id', authenticateMiddleware, async (req: AuthenticatedReq
       const parentEmail = (req.user?.email || '').toLowerCase().trim();
       const parentName = (req.user?.full_name || '').toLowerCase().trim();
       const parentPhone = (req.user?.phone || '').trim();
+      const linkedStudentIds = (db.data.parentStudents || [])
+        .filter((ps) => ps.parent_profile_id === req.user?.id || (parentEmail && (ps.parent_email || '').toLowerCase() === parentEmail))
+        .map((ps) => ps.student_id);
+
+      const isLinked = linkedStudentIds.includes(student.id);
       const gEmail = (student.guardian_email || '').toLowerCase().trim();
       const gName = (student.guardian_name || '').toLowerCase().trim();
       const gPhone = (student.guardian_phone || '').trim();
 
       const isMatch =
+        isLinked ||
         (parentEmail && gEmail && (gEmail === parentEmail || parentEmail.includes(gEmail) || gEmail.includes(parentEmail))) ||
         (parentPhone && gPhone && gPhone === parentPhone) ||
         (parentName && gName && (gName.includes(parentName) || parentName.includes(gName)));
@@ -2250,7 +2308,7 @@ const handleSaveAttendanceSession = async (req: AuthenticatedRequest, res: Respo
     }
 
     // Verify authorized role for marking attendance
-    const allowedMarkingRoles = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'PRINCIPAL', 'TEACHER', 'ACADEMIC_COORDINATOR'];
+    const allowedMarkingRoles = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER', 'ACADEMIC_COORDINATOR'];
     if (!allowedMarkingRoles.includes(req.userRole || '')) {
       return res.status(403).json({ error: 'You are not authorized to submit attendance records.' });
     }
@@ -2696,11 +2754,15 @@ router.post(
 router.delete(
   '/schools/:id',
   authenticateMiddleware,
-  requireRoles('SUPER_ADMIN', 'SCHOOL_ADMIN'),
+  requireRoles('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      if (req.userRole !== 'SUPER_ADMIN' && req.school?.id !== id) {
+      const isSuper = req.userRole === 'SUPER_ADMIN';
+      const isAdmin = req.userRole === 'ADMIN' || req.userRole === 'SCHOOL_ADMIN';
+      const isOwnSchool = req.school?.id === id || req.membership?.school_id === id;
+
+      if (!isSuper && !isAdmin && !isOwnSchool) {
         return res.status(403).json({ error: 'You are only authorized to decommission your own institution.' });
       }
 
@@ -2858,6 +2920,48 @@ router.put(
       });
 
       res.json({ message: 'Institutional settings saved.', settings: updated, school: updatedSchool });
+    } catch (err: any) {
+      res.status(500).json({ error: mapDatabaseError(err) });
+    }
+  }
+);
+
+router.get(
+  '/academic-sessions',
+  authenticateMiddleware,
+  requireRoles('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'PRINCIPAL', 'ACADEMIC_COORDINATOR'),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const schoolId = req.school!.id;
+      const sessions = await repositories.schools.getAcademicSessions(schoolId);
+      res.json({ sessions });
+    } catch (err: any) {
+      res.status(500).json({ error: mapDatabaseError(err) });
+    }
+  }
+);
+
+router.post(
+  '/academic-sessions',
+  authenticateMiddleware,
+  requireRoles('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const schoolId = req.school!.id;
+      const { name, start_date, end_date, is_current } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: 'Academic session name is required.' });
+      }
+      const newSession = await repositories.schools.createAcademicSession({
+        id: `sess-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        school_id: schoolId,
+        name,
+        start_date: start_date || new Date().toISOString(),
+        end_date: end_date || new Date().toISOString(),
+        is_current: is_current !== undefined ? !!is_current : true,
+        created_at: new Date().toISOString(),
+      });
+      res.json({ success: true, session: newSession });
     } catch (err: any) {
       res.status(500).json({ error: mapDatabaseError(err) });
     }
@@ -3313,7 +3417,7 @@ const handleSaveRemarks = async (req: AuthenticatedRequest, res: Response) => {
       form_teacher_remark: formTeacherRemark ?? form_teacher_remark ?? existing?.form_teacher_remark,
       form_teacher_id: req.user!.id,
       principal_remark: principalRemark ?? principal_remark ?? existing?.principal_remark,
-      principal_id: req.userRole === 'PRINCIPAL' || req.userRole === 'SCHOOL_ADMIN' ? req.user!.id : existing?.principal_id,
+      principal_id: req.userRole === 'PRINCIPAL' || req.userRole === 'SCHOOL_ADMIN' || req.userRole === 'ADMIN' ? req.user!.id : existing?.principal_id,
       next_term_fees: next_term_fees ?? existing?.next_term_fees,
       next_term_resumption_date: nextTermResumptionDate ?? next_term_resumption_date ?? existing?.next_term_resumption_date,
       created_at: existing?.created_at || new Date().toISOString(),
@@ -3613,7 +3717,7 @@ router.post('/finance/payments', authenticateMiddleware, async (req: Authenticat
       description: description || 'School Term Fee Settlement',
       payment_date: new Date().toISOString(),
       status: 'VERIFIED',
-      verified_by: req.userRole === 'BURSAR' || req.userRole === 'SCHOOL_ADMIN' ? req.user!.full_name : 'Automated Payment Gateway (Paystack/Interswitch)',
+      verified_by: req.userRole === 'BURSAR' || req.userRole === 'SCHOOL_ADMIN' || req.userRole === 'ADMIN' ? req.user!.full_name : 'Automated Payment Gateway (Paystack/Interswitch)',
       created_at: new Date().toISOString(),
     };
 

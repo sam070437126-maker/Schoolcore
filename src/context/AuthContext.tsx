@@ -43,6 +43,10 @@ interface AuthContextType {
   isRegistrar: boolean;
   isParent: boolean;
   isBursar: boolean;
+  isDeveloper: boolean;
+  isProductManager: boolean;
+  isProductDesigner: boolean;
+  isPlatformStaff: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,11 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMembership(data.membership);
       setStaff(data.staff || null);
 
-      // If user is super admin and was inspecting a school workspace
+      // If user is super admin or admin and was inspecting a school workspace
       const savedSchoolId = localStorage.getItem('schoolcore_active_school_id');
       const savedWorkspaceFlag = localStorage.getItem('schoolcore_in_school_workspace') === 'true';
 
-      if (data.membership?.role === 'SUPER_ADMIN' && savedWorkspaceFlag && savedSchoolId) {
+      const userRoleUpper = (data.membership?.role || '').toUpperCase();
+      if ((userRoleUpper === 'SUPER_ADMIN' || userRoleUpper === 'ADMIN') && savedWorkspaceFlag && savedSchoolId) {
         try {
           const schRes = await api.getSchools();
           const target = schRes.schools?.find((s) => s.id === savedSchoolId);
@@ -88,24 +93,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsInSchoolWorkspace(true);
           } else {
             setSchool(data.school);
-            setIsInSchoolWorkspace(false);
+            setIsInSchoolWorkspace(true);
           }
         } catch {
           setSchool(data.school);
+          setIsInSchoolWorkspace(true);
         }
       } else {
         setSchool(data.school);
-        if (data.membership?.role !== 'SUPER_ADMIN') {
+        if (userRoleUpper !== 'SUPER_ADMIN') {
           setIsInSchoolWorkspace(true);
         }
       }
-    } catch (err) {
-      console.warn('Session expired or invalidated. Clearing session:', err);
-      clearStoredToken();
-      setUser(null);
-      setSchool(null);
-      setMembership(null);
-      setStaff(null);
+    } catch (err: any) {
+      const isAuthRevoked =
+        err?.status === 401 ||
+        err?.message?.includes('401') ||
+        err?.message?.includes('Invalid or expired') ||
+        err?.message?.includes('expired');
+
+      if (isAuthRevoked) {
+        console.warn('Session explicitly invalidated by server. Clearing session:', err);
+        clearStoredToken();
+        setUser(null);
+        setSchool(null);
+        setMembership(null);
+        setStaff(null);
+      } else {
+        console.warn('Temporary connection notice during session refresh. Retaining active session:', err);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -336,14 +352,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const role = membership?.role || null;
-  const isSuperAdmin = role === 'SUPER_ADMIN';
-  const isAdmin = role === 'SUPER_ADMIN' || role === 'SCHOOL_ADMIN';
-  const isPrincipal = role === 'PRINCIPAL';
-  const isAcademicCoordinator = role === 'ACADEMIC_COORDINATOR';
-  const isRegistrar = role === 'REGISTRAR';
-  const isTeacher = role === 'TEACHER';
-  const isParent = role === 'PARENT';
-  const isBursar = role === 'BURSAR';
+  const normalizedRole = (role || '').toUpperCase();
+  const isSuperAdmin = normalizedRole === 'SUPER_ADMIN';
+  const isDeveloper = normalizedRole === 'DEVELOPER';
+  const isProductManager = normalizedRole === 'PRODUCT_MANAGER';
+  const isProductDesigner = normalizedRole === 'PRODUCT_DESIGNER';
+  const isPlatformStaff = isDeveloper || isProductManager || isProductDesigner;
+  const isAdmin = isSuperAdmin || normalizedRole === 'SCHOOL_ADMIN' || normalizedRole === 'ADMIN' || isPlatformStaff;
+  const isPrincipal = normalizedRole === 'PRINCIPAL';
+  const isAcademicCoordinator = normalizedRole === 'ACADEMIC_COORDINATOR';
+  const isRegistrar = normalizedRole === 'REGISTRAR';
+  const isTeacher = normalizedRole === 'TEACHER';
+  const isParent = normalizedRole === 'PARENT';
+  const isBursar = normalizedRole === 'BURSAR';
   const isAuthenticated = !!user;
 
   return (
@@ -380,6 +401,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isRegistrar,
         isParent,
         isBursar,
+        isDeveloper,
+        isProductManager,
+        isProductDesigner,
+        isPlatformStaff,
       }}
     >
       {children}

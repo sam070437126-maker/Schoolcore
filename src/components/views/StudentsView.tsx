@@ -33,7 +33,7 @@ interface StudentsViewProps {
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate }) => {
-  const { role, isAdmin, isPrincipal, isRegistrar, isSuperAdmin, isParent, school } = useAuth();
+  const { role, isAdmin, isPrincipal, isRegistrar, isSuperAdmin, isParent, isTeacher, school } = useAuth();
   const { showToast } = useToast();
   const canManage = (isAdmin || isPrincipal || isRegistrar || isSuperAdmin) && !isParent;
 
@@ -46,6 +46,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate })
   const [selectedClass, setSelectedClass] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [teacherOnlyMyStudents, setTeacherOnlyMyStudents] = useState<boolean>(isTeacher);
+  const [selectedChildIndex, setSelectedChildIndex] = useState<number>(0);
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(!!initialOpenCreate);
@@ -95,6 +97,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate })
         search,
         classId: selectedClass,
         status: selectedStatus,
+        scope: isTeacher && teacherOnlyMyStudents ? 'my_classes' : undefined,
         page,
         limit: 15,
       });
@@ -106,7 +109,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate })
     } finally {
       setIsLoading(false);
     }
-  }, [search, selectedClass, selectedStatus, page, showToast]);
+  }, [search, selectedClass, selectedStatus, page, isTeacher, teacherOnlyMyStudents, showToast]);
 
   useEffect(() => {
     fetchClasses();
@@ -246,9 +249,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate })
   };
 
   if (isParent) {
-    const child = students[0];
+    const child = students[selectedChildIndex] || students[0];
     return (
       <div id="parent-student-view" className="space-y-6 max-w-4xl mx-auto">
+        {students.length > 1 && (
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-2 overflow-x-auto">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-1">
+              Select Child:
+            </span>
+            {students.map((st, idx) => (
+              <button
+                key={st.id}
+                onClick={() => setSelectedChildIndex(idx)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  (selectedChildIndex === idx || (!selectedChildIndex && idx === 0))
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {st.first_name} {st.last_name} ({st.current_class_name || 'Class'})
+              </button>
+            ))}
+          </div>
+        )}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
@@ -388,6 +411,39 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ initialOpenCreate })
 
         {/* Dropdown Filters */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {isTeacher && (
+            <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs mr-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setTeacherOnlyMyStudents(true);
+                  setPage(1);
+                }}
+                className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                  teacherOnlyMyStudents
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Students I Teach
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTeacherOnlyMyStudents(false);
+                  setPage(1);
+                }}
+                className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                  !teacherOnlyMyStudents
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Students
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Filter className="w-3.5 h-3.5" />
             <span>Filter:</span>

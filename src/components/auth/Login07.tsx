@@ -245,9 +245,6 @@ export default function Login07({ onSwitchToSignUp, onSuccess, onForgotPassword 
                     <KeyRound size={18} />
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Default sample/fallback activation code: <code className="text-amber-400 font-mono font-bold">123456</code>
-                </p>
               </div>
 
               <div>

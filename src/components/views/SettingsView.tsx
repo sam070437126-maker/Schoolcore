@@ -25,16 +25,20 @@ import {
   Building2,
   Navigation,
   User,
-  KeyRound
+  KeyRound,
+  Trash2
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
-  const { school, updateSchoolContext } = useAuth();
+  const { school, updateSchoolContext, isAdmin, isSuperAdmin, logout } = useAuth();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'account'>('profile');
   const [settings, setSettings] = useState<SchoolSettings | null>(null);
   const [currentSchool, setCurrentSchool] = useState<School | null>(school);
+  const [showDecommissionModal, setShowDecommissionModal] = useState<boolean>(false);
+  const [isDecommissioning, setIsDecommissioning] = useState<boolean>(false);
+  const [decommissionConfirmText, setDecommissionConfirmText] = useState<string>('');
 
   const [formData, setFormData] = useState({
     school_name: '',
@@ -514,7 +518,120 @@ export const SettingsView: React.FC = () => {
             <span>{isSaving ? 'Saving...' : 'Save All Settings'}</span>
           </button>
         </div>
+
+        {/* Danger Zone: Institution Decommissioning (Admins only) */}
+        {(isAdmin || isSuperAdmin) && currentSchool && currentSchool.id !== 'global-platform' && (
+          <div className="mt-8 bg-red-50/50 border border-red-200 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Danger Zone: Decommission Institution</span>
+            </div>
+            <p className="text-xs text-red-600/90 leading-relaxed">
+              Permanently decommission and delete this school tenant (<strong className="font-semibold text-red-800">{currentSchool.name}</strong>), including all associated rosters, classes, attendance sessions, and records. This action cannot be undone.
+            </p>
+            <div className="pt-1 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 font-mono">School ID: {currentSchool.id}</span>
+              <button
+                id="btn-decommission-school-open"
+                type="button"
+                onClick={() => {
+                  setDecommissionConfirmText('');
+                  setShowDecommissionModal(true);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Decommission School</span>
+              </button>
+            </div>
+          </div>
+        )}
       </form>
+      )}
+
+      {/* Decommission Confirmation Modal */}
+      {showDecommissionModal && currentSchool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-200">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Decommission School?</h3>
+                <p className="text-xs text-slate-500">{currentSchool.name}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              Are you sure you want to permanently delete <strong className="font-bold text-slate-900">{currentSchool.name}</strong>? All student records, attendance rolls, faculty assignments, and school data will be erased immediately.
+            </p>
+
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-center justify-between">
+              <span>Type <strong>DELETE</strong> to confirm:</span>
+              <button
+                type="button"
+                onClick={() => setDecommissionConfirmText('DELETE')}
+                className="text-[11px] text-amber-700 hover:text-amber-900 underline font-semibold cursor-pointer"
+              >
+                Quick Fill
+              </button>
+            </div>
+
+            <input
+              id="decommission-confirm-input"
+              type="text"
+              value={decommissionConfirmText}
+              onChange={(e) => setDecommissionConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono mb-4 focus:outline-red-500"
+            />
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowDecommissionModal(false)}
+                disabled={isDecommissioning}
+                className="px-4 py-2 border border-slate-300 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-confirm-decommission"
+                type="button"
+                disabled={isDecommissioning || decommissionConfirmText.trim().toUpperCase() !== 'DELETE'}
+                onClick={async () => {
+                  setIsDecommissioning(true);
+                  try {
+                    await api.deleteSchool(currentSchool.id);
+                    showToast(`School tenant "${currentSchool.name}" successfully deleted.`, 'success');
+                    setShowDecommissionModal(false);
+                    setTimeout(() => {
+                      logout();
+                    }, 1200);
+                  } catch (err: any) {
+                    showToast(err.message || 'Failed to delete school tenant.', 'error');
+                  } finally {
+                    setIsDecommissioning(false);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {isDecommissioning ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete School Tenant</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Google School Discovery Search Modal */}

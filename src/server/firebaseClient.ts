@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getFirestore, type Firestore, doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
 

@@ -3,7 +3,7 @@
   "name": "SchoolCore Operating System",
   "short_name": "SchoolCore",
   "description": "Lightweight digital operating system for secondary schools to manage students, classes, staff, attendance, notices, and everyday operations.",
-  "start_url": "/",
+  "start_url": "/?source=pwa&mode=standalone",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

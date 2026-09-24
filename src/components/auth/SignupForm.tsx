@@ -82,10 +82,11 @@ export default function SignupForm({ onSwitchToSignIn, onSuccess, onHaveTokenCli
     setIsLoading(true);
     try {
       await register({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         full_name: fullName,
         school_name: assignedSchool,
+        role: role,
       });
       showToast("Account created successfully! Welcome to your workspace.");
       onSuccess?.();
@@ -128,14 +129,14 @@ export default function SignupForm({ onSwitchToSignIn, onSuccess, onHaveTokenCli
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Teachers, staff, and parents are granted access via secure verification links dispatched by their Principal.
+                School administrators provision accounts for teachers & parents directly with linked students and access codes.
               </p>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 px-6 sm:px-8">
             <form onSubmit={handleCreateAccount} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">Account Role</Label>
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger
                     id="role"
@@ -148,18 +149,6 @@ export default function SignupForm({ onSwitchToSignIn, onSuccess, onHaveTokenCli
                       <ShieldCheck size={16} className="text-emerald-600" aria-hidden="true" />
                       <span className="truncate">School Administrator</span>
                     </SelectItem>
-                    <SelectItem value="principal">
-                      <GraduationCap size={16} className="text-purple-600" aria-hidden="true" />
-                      <span className="truncate">Principal / Head of School</span>
-                    </SelectItem>
-                    <SelectItem value="teacher">
-                      <BookOpen size={16} className="text-blue-600" aria-hidden="true" />
-                      <span className="truncate">Subject / Class Teacher</span>
-                    </SelectItem>
-                    <SelectItem value="designer">
-                      <User size={16} className="text-amber-600" aria-hidden="true" />
-                      <span className="truncate">Product Designer</span>
-                    </SelectItem>
                     <SelectItem value="developer">
                       <Code size={16} className="text-cyan-600" aria-hidden="true" />
                       <span className="truncate">Developer</span>
@@ -167,6 +156,10 @@ export default function SignupForm({ onSwitchToSignIn, onSuccess, onHaveTokenCli
                     <SelectItem value="manager">
                       <BarChart size={16} className="text-indigo-600" aria-hidden="true" />
                       <span className="truncate">Product Manager</span>
+                    </SelectItem>
+                    <SelectItem value="designer">
+                      <User size={16} className="text-amber-600" aria-hidden="true" />
+                      <span className="truncate">Product Designer</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>

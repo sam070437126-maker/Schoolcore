@@ -4,6 +4,7 @@ import { NavTab } from '../layout/Sidebar.tsx';
 import { PaperlessScorecard } from './PaperlessScorecard.tsx';
 import { AdminInvitationsModal } from '../admin/AdminInvitationsModal.tsx';
 import { AdminUserAccountsModal } from '../admin/AdminUserAccountsModal.tsx';
+import { SchoolControlRoom } from '../admin/SchoolControlRoom.tsx';
 import { DashboardStats } from '../../types/index.ts';
 import {
   Calendar,
@@ -43,6 +44,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   todayFormatted,
 }) => {
   const { user, school, isAdmin, isPrincipal } = useAuth();
+  const [activeAdminSubTab, setActiveAdminSubTab] = useState<'control_room' | 'overview'>('control_room');
   const [showSetupChecklist, setShowSetupChecklist] = useState<boolean>(true);
   const [isInvitationsModalOpen, setIsInvitationsModalOpen] = useState<boolean>(false);
   const [isUserAccountsModalOpen, setIsUserAccountsModalOpen] = useState<boolean>(false);
@@ -177,10 +179,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Institutional Paperless Transformation Scorecard */}
-      <PaperlessScorecard onNavigate={onNavigate} />
+      {/* Subtab Switcher: Control Room vs Executive Overview */}
+      <div className="flex border-b border-slate-200 gap-6 text-xs font-bold text-slate-500">
+        <button
+          id="tab-control-room"
+          onClick={() => setActiveAdminSubTab('control_room')}
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeAdminSubTab === 'control_room'
+              ? 'border-emerald-600 text-emerald-600 font-extrabold'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-500" />
+          <span>School Control Room & Teacher Command</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </button>
+        <button
+          id="tab-overview"
+          onClick={() => setActiveAdminSubTab('overview')}
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeAdminSubTab === 'overview'
+              ? 'border-emerald-600 text-emerald-600 font-extrabold'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Executive Overview & Scorecards</span>
+        </button>
+      </div>
 
-      {/* Onboarding & Setup Workflow Guide */}
+      {activeAdminSubTab === 'control_room' ? (
+        <SchoolControlRoom onNavigate={onNavigate} />
+      ) : (
+        <>
+          {/* Institutional Paperless Transformation Scorecard */}
+          <PaperlessScorecard onNavigate={onNavigate} />
+
+          {/* Onboarding & Setup Workflow Guide */}
       {showSetupChecklist && (
         <div id="onboarding-setup-guide" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-50/60 via-slate-50 to-white border-b border-slate-100">
@@ -450,6 +485,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* School-Verified Institutional Invitations Modal */}
       <AdminInvitationsModal

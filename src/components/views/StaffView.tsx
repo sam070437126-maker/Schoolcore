@@ -43,6 +43,10 @@ export const StaffView: React.FC<StaffViewProps> = ({ initialOpenCreate }) => {
   const [isInvitationsModalOpen, setIsInvitationsModalOpen] = useState<boolean>(false);
   const [isUserAccountsModalOpen, setIsUserAccountsModalOpen] = useState<boolean>(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [assignModalStaff, setAssignModalStaff] = useState<StaffMember | null>(null);
+  const [assignClassIds, setAssignClassIds] = useState<string[]>([]);
+  const [isSavingAssign, setIsSavingAssign] = useState<boolean>(false);
+  const [quickOtpData, setQuickOtpData] = useState<{ isOpen: boolean; name: string; code: string } | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -148,6 +152,53 @@ export const StaffView: React.FC<StaffViewProps> = ({ initialOpenCreate }) => {
       fetchStaffAndClasses();
     } catch (err: any) {
       showToast('Failed to update staff status.', 'error');
+    }
+  };
+
+  const handleOpenQuickAssign = (stf: StaffMember) => {
+    setAssignModalStaff(stf);
+    setAssignClassIds(stf.assigned_classes || []);
+  };
+
+  const handleSaveQuickAssign = async () => {
+    if (!assignModalStaff) return;
+    setIsSavingAssign(true);
+    try {
+      await api.updateStaff(assignModalStaff.id, {
+        assigned_classes: assignClassIds,
+      });
+      showToast(`Updated assigned classes for ${assignModalStaff.full_name}`, 'success');
+      setAssignModalStaff(null);
+      fetchStaffAndClasses();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update assignments.', 'error');
+    } finally {
+      setIsSavingAssign(false);
+    }
+  };
+
+  const handleIssueQuickOtp = async (stf: StaffMember) => {
+    try {
+      const usersRes = await api.getAdminUsers();
+      const existing = (usersRes?.users || []).find(
+        (u: any) => (u.profile?.email || '').toLowerCase() === stf.email.toLowerCase()
+      );
+      if (existing) {
+        const res = await api.regenerateUserOtp(existing.membership_id || existing.id);
+        setQuickOtpData({ isOpen: true, name: stf.full_name, code: (res as any).otp_code || res.otpCode });
+        showToast(`Generated 6-digit access code for ${stf.full_name}`, 'success');
+      } else {
+        const res = await api.createAdminUser({
+          email: stf.email,
+          full_name: stf.full_name,
+          role: stf.role as any,
+          phone: stf.phone,
+        });
+        setQuickOtpData({ isOpen: true, name: stf.full_name, code: res.otpCode });
+        showToast(`Provisioned account & issued 6-digit code for ${stf.full_name}`, 'success');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate access code.', 'error');
     }
   };
 
@@ -351,7 +402,22 @@ export const StaffView: React.FC<StaffViewProps> = ({ initialOpenCreate }) => {
                     {stf.status}
                   </span>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => handleOpenQuickAssign(stf)}
+                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Assign classes to this teacher"
+                    >
+                      Assign Classes
+                    </button>
+                    <button
+                      onClick={() => handleIssueQuickOtp(stf)}
+                      className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
+                      title="Generate 6-digit access code for device login"
+                    >
+                      <KeyRound className="w-3 h-3 text-amber-600" />
+                      <span>Access Code</span>
+                    </button>
                     <button
                       id={`edit-staff-${stf.id}`}
                       onClick={() => handleOpenEdit(stf)}
@@ -607,6 +673,111 @@ export const StaffView: React.FC<StaffViewProps> = ({ initialOpenCreate }) => {
         isOpen={isUserAccountsModalOpen}
         onClose={() => setIsUserAccountsModalOpen(false)}
       />
+
+      {/* QUICK ASSIGN CLASSES MODAL */}
+      <Modal
+        id="quick-assign-modal"
+        isOpen={!!assignModalStaff}
+        onClose={() => setAssignModalStaff(null)}
+        title={`Assign Classes: ${assignModalStaff?.full_name}`}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600">
+            Select the classes taught by <strong>{assignModalStaff?.full_name}</strong>. The teacher will immediately be able to view these scholars and record attendance.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-2 bg-slate-50 border rounded-xl">
+            {classes.map((cls) => {
+              const isSelected = assignClassIds.includes(cls.id);
+              return (
+                <label
+                  key={cls.id}
+                  className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : 'bg-white border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setAssignClassIds([...assignClassIds, cls.id]);
+                      } else {
+                        setAssignClassIds(assignClassIds.filter((id) => id !== cls.id));
+                      }
+                    }}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                  />
+                  <span>{cls.name}</span>
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t flex justify-end gap-2">
+            <button
+              onClick={() => setAssignModalStaff(null)}
+              className="px-4 py-2 border rounded-lg text-xs font-semibold text-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveQuickAssign}
+              disabled={isSavingAssign}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+            >
+              {isSavingAssign ? 'Saving...' : 'Save Class Assignments'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* QUICK OTP DISPLAY MODAL */}
+      <Modal
+        id="quick-otp-modal"
+        isOpen={!!quickOtpData?.isOpen}
+        onClose={() => setQuickOtpData(null)}
+        title="Faculty One-Time Access Passcode"
+      >
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+            <KeyRound className="w-6 h-6" />
+          </div>
+          <h4 className="font-bold text-slate-900 text-sm">{quickOtpData?.name}</h4>
+          <div className="p-4 bg-slate-900 text-white rounded-xl">
+            <span className="text-[10px] uppercase font-bold text-emerald-400 block mb-1">
+              6-Digit One-Time Activation Passcode
+            </span>
+            <div className="text-3xl font-mono font-extrabold tracking-widest text-emerald-400">
+              {quickOtpData?.code}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2">
+              Valid for 14 days. Staff member can use this code to sign in directly without email activation.
+            </p>
+          </div>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => {
+                if (quickOtpData?.code) {
+                  navigator.clipboard.writeText(quickOtpData.code);
+                  showToast('Access code copied!', 'success');
+                }
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold"
+            >
+              Copy 6-Digit Code
+            </button>
+            <button
+              onClick={() => setQuickOtpData(null)}
+              className="px-4 py-2 border rounded-lg text-xs font-semibold"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

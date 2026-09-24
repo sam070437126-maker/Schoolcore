@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import {
   LayoutDashboard,
+  Activity,
   Users,
   GraduationCap,
   ClipboardCheck,
@@ -25,6 +26,7 @@ import {
 
 export type NavTab = 
   | 'dashboard'
+  | 'control_room'
   | 'students'
   | 'classes'
   | 'attendance'
@@ -539,6 +541,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* ------------------------------------------------------------- */}
             {((isAdmin && !isSuperAdmin) || (isSuperAdmin && isInSchoolWorkspace)) && (
               <>
+                <button
+                  id="nav-control-room"
+                  onClick={() => handleNav('control_room')}
+                  className={getNavBtnClass(activeTab === 'control_room')}
+                >
+                  <Activity className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>Control Room & Faculty</span>
+                  <span className="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </button>
+
                 <button
                   id="nav-students"
                   onClick={() => handleNav('students')}

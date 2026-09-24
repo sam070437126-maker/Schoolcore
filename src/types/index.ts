@@ -1,12 +1,16 @@
 export type UserRole = 
   | 'SUPER_ADMIN' 
   | 'SCHOOL_ADMIN' 
+  | 'ADMIN'
   | 'PRINCIPAL' 
   | 'TEACHER' 
   | 'BURSAR' 
   | 'ACADEMIC_COORDINATOR'
   | 'REGISTRAR'
-  | 'PARENT';
+  | 'PARENT'
+  | 'DEVELOPER'
+  | 'PRODUCT_MANAGER'
+  | 'PRODUCT_DESIGNER';
 
 export type Role = UserRole;
 export type AcademicTerm = 'FIRST_TERM' | 'SECOND_TERM' | 'THIRD_TERM';
